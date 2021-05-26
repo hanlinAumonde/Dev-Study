@@ -51,7 +51,7 @@ public:
 你可以按任意顺序返回答案。·
 */
 //解法1 暴力枚举
-class Solution {
+class Solution_1_mine {
 public:
     vector<int> twoSum(vector<int>& nums, int target) {
         for(int i=0;i<nums.size();i++){
@@ -72,7 +72,7 @@ public:
 
 这样我们创建一个哈希表，对于每一个 x，我们首先查询哈希表中是否存在 target - x，然后将 x 插入到哈希表中，即可保证不会让 x 和自己匹配。
 */
-class Solution {
+class Solution_1_best {
 public:
     vector<int> twoSum(vector<int>& nums, int target) {
         unordered_map<int, int> hashtable;
