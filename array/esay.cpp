@@ -20,7 +20,7 @@ using namespace std;
 //思路：指针i指向实际索引，一旦发现重复数字就直接跳到下一项
 //指针count指向有效数组索引，即每次循环中输出数组的最后一位，每次循环中count之前均为不重复的
 //时间复杂度 O（N）  空间复杂度 O（1）
-class Solution26 {
+class Solution_26 {
 public:
     int removeDuplicates(vector<int>& nums) {
          int n = nums.size();
@@ -50,7 +50,7 @@ public:
 
 你可以按任意顺序返回答案。·
 */
-//解法1 暴力枚举
+//解法1 暴力枚举(每次先想到的全是暴力解。。。)
 class Solution_1_mine {
 public:
     vector<int> twoSum(vector<int>& nums, int target) {
@@ -68,7 +68,7 @@ public:
 /*
 注意到方法一的时间复杂度较高的原因是寻找 target - x 的时间复杂度过高。因此，我们需要一种更优秀的方法，能够快速寻找数组中是否存在目标元素。如果存在，我们需要找出它的索引。
 
-使用哈希表，可以将寻找 target - x 的时间复杂度降低到从 O(N)O(N) 降低到 O(1)O(1)。
+使用哈希表，可以将寻找 target - x 的时间复杂度降低到从 O(N) 降低到 O(1)。
 
 这样我们创建一个哈希表，对于每一个 x，我们首先查询哈希表中是否存在 target - x，然后将 x 插入到哈希表中，即可保证不会让 x 和自己匹配。
 */
