@@ -92,7 +92,7 @@ public:
 };
 //最优解2 位运算
 //思路： 每读取一位就将这位bit左移一位从而可以直接得到结果
-class Solution1290_meilleur_2 {
+class Solution1290_best_2 {
 public:
     int getDecimalValue(ListNode* head) {
         int res = 0;
