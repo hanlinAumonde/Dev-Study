@@ -5,8 +5,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import javax.swing.text.AsyncBoxView.ChildLocator;
-
 public class BTree<T extends Comparable<T>> {
 	private int minDataSizePerNode;
 	private int midPos_split;
@@ -21,8 +19,8 @@ public class BTree<T extends Comparable<T>> {
 		Node(boolean isLeaf, Node<T> parent) {
 			this.isLeaf = isLeaf;
 			this.parent = parent;
-			this.children = new ArrayList<Node<T>>();
-			this.dataList = new ArrayList<T>();
+			this.children = new LinkedList<Node<T>>();
+			this.dataList = new LinkedList<T>();
 		}
 	}
 	
