@@ -28,6 +28,10 @@ public class B_plus_Tree<K extends Comparable<K>,V> {
 			return this.keys.get(this.keys.size() - 1);
 		}
 		
+		public K getMinKey() {
+			return this.keys.get(0);
+		}
+		
 		public void setMaxKey(K key) {
 			this.keys.set(this.keys.size() - 1, key);
 		}
@@ -48,6 +52,17 @@ public class B_plus_Tree<K extends Comparable<K>,V> {
             	child.parent = this
             );
             this.childs.addAll(childs);
+		}
+		
+		public void addKeyAndChild(K key, Node<K, V> child, int index) {
+			this.keys.add(index, key);
+			child.parent = this;
+			this.childs.add(index, child);
+		}
+		
+		public void removeKeyAndChild(int index) {
+			this.keys.remove(index);
+			this.childs.remove(index);
 		}
 	}
 	
@@ -73,6 +88,19 @@ public class B_plus_Tree<K extends Comparable<K>,V> {
 			this.keys.addAll(leafNode.keys.subList(startIndex, endIndex));
 			this.values.addAll(leafNode.values.subList(startIndex, endIndex));
 		}
+		
+		public void removeKeyAndValue(int index) {
+			this.keys.remove(index);
+			this.values.remove(index);
+		}
+		
+		public V getMaxValue() {
+			return this.values.get(this.values.size() - 1);
+		}
+		
+		public V getMinValue() {
+			return this.values.get(0);
+		}
 	}
 	
 	private Node<K, V> root;
@@ -83,7 +111,7 @@ public class B_plus_Tree<K extends Comparable<K>,V> {
             throw new IllegalArgumentException("Order should be greater than 2");
         }
 		this.order = order;
-		this.minKeysSizePerNode = (int) Math.floor(order / 2.0);
+		this.minKeysSizePerNode = (int) Math.ceil(order / 2.0);
 		this.splitIndex = (int) Math.ceil(order / 2.0);
 		this.root = new LeafNode<>(null);
 		this.LeafNodeEntry = (LeafNode<K, V>) this.root;
@@ -212,24 +240,30 @@ public class B_plus_Tree<K extends Comparable<K>,V> {
 	static class SearchedResult<K extends Comparable<K>,V>{
 		LeafNode<K, V> resultNode;
 		int index;
+		boolean found;
 		
-		SearchedResult(LeafNode<K, V> resultNode, int index) {
+		SearchedResult(LeafNode<K, V> resultNode, int index, boolean found) {
 			this.resultNode = resultNode;
 			this.index = index;
+			this.found = found;
 		}
 		
-		public K getKey() {
-			return index != this.resultNode.keys.size() ? this.resultNode.keys.get(index) : null;
+		public int getExactIndex(boolean ascending) {
+			return found? this.index : ascending? this.index : this.index - 1;
+		}
+		
+		public K getKey(boolean ascending) {
+			return found? this.resultNode.keys.get(index) : 
+				ascending? this.resultNode.keys.get(index) : this.resultNode.keys.get(index-1);
 		}
 		
 		public V getValue() {
-			if (index != this.resultNode.keys.size()) {
+			if (found) {
                 return this.resultNode.values.get(index);
 			}else {
 				System.out.println("Key not found");
 				return null;
 			}
-			//return index != this.resultNode.keys.size()? this.resultNode.values.get(index) : null;
 		}
 	}
 	//----------------Search a single key-----------------
@@ -242,12 +276,12 @@ public class B_plus_Tree<K extends Comparable<K>,V> {
 	private SearchedResult<K, V> searchKeyFromRoot(K key, Node<K, V> node) {
 		int searchIndex = Collections.binarySearch(node.keys, key);
 		if(searchIndex >= 0) {
-			return node.isLeaf? new SearchedResult<>((LeafNode<K, V>) node, searchIndex)
+			return node.isLeaf? new SearchedResult<>((LeafNode<K, V>) node, searchIndex, true)
 			        : searchKeyFromRoot(key, ((InternalNode<K, V>) node).childs.get(searchIndex));
 		}
 		if (node.isLeaf) {
 			//System.out.println("Key not found");
-			return new SearchedResult<>((LeafNode<K, V>) node, -searchIndex-1);
+			return new SearchedResult<>((LeafNode<K, V>) node, -searchIndex-1, false);
 		}
 		searchIndex = (searchIndex == -1 - node.keys.size())? node.keys.size() - 1 : -searchIndex - 1;
 		return searchKeyFromRoot(key, ((InternalNode<K, V>) node).childs.get(searchIndex));
@@ -272,33 +306,184 @@ public class B_plus_Tree<K extends Comparable<K>,V> {
 	
 	//----------------Search a range of keys-----------------
 	
-	public List<V> searchRange(K startKey, K endKey){
-		SearchedResult<K, V> start = searchKeyFromRoot(startKey, this.root);
+	public List<V> searchRange(K startKey, K endKey, boolean ascending) {
+		SearchedResult<K, V> start = ascending? searchKeyFromRoot(startKey, this.root) : searchKeyFromRoot(endKey, this.root);
 		LeafNode<K, V> currentNode = start.resultNode;
-		int currentIndex = start.index;
-		K currentKey = start.getKey();
+		int currentIndex = start.getExactIndex(ascending);
+		K currentKey = start.getKey(ascending);
 		if(currentKey == null) {
             return Collections.emptyList();
         }
 		List<V> result = new LinkedList<>();
-		while(currentNode != null && currentKey.compareTo(endKey) <= 0) {
+		while(currentNode != null && (ascending? currentKey.compareTo(endKey) <= 0 : currentKey.compareTo(startKey) >= 0)) {
 			result.add(currentNode.values.get(currentIndex));
-			if(currentIndex == currentNode.keys.size() - 1) {
-                currentNode = currentNode.next;
-                currentIndex = 0;
+			if(currentIndex == (ascending? currentNode.keys.size() - 1 : 0)) {
+                currentNode = ascending? currentNode.next : currentNode.previous;
+				if (currentNode == null) {
+					break;
+				}
+                currentIndex = ascending? 0 : currentNode.keys.size()-1;
             }else {
-            	currentIndex++;
+            	currentIndex += ascending? 1 : -1;
             }
 			currentKey = currentNode == null ? null : currentNode.keys.get(currentIndex);
 		}
 		return result;
 	}
 	
+	public List<V> searchRange_SingleEdge(K key, boolean ascending, boolean greaterThan){
+		return greaterThan? searchRange(key, this.root.getMaxKey(), ascending) :
+			searchRange(this.LeafNodeEntry.getMinKey(), key, ascending);
+	}
+	
 //-------------------------------------------------------------------------------------------
 //-------------------------- Deletion methods -----------------------------------------------
 //-------------------------------------------------------------------------------------------
 	
+	public void delete(K key) {
+		if (key == null) {
+			throw new IllegalArgumentException("Key should not be null");
+		}
+		SearchedResult<K, V> resultToDelete = searchKeyFromRoot(key, this.root);
+		if (resultToDelete.getValue() == null) {
+			System.out.println("Key not found");
+			return;
+		}
+		deleteKeyFromLeaf(key, resultToDelete);
+	}
 	
+	private void deleteKeyFromLeaf(K key, SearchedResult<K, V> resultToDelete) {
+		LeafNode<K, V> node = resultToDelete.resultNode;
+		K maxKeyBeforeDelete = node.getMaxKey();
+		node.removeKeyAndValue(resultToDelete.index);
+		if (key == maxKeyBeforeDelete) {
+			updateParentKeys((InternalNode<K, V>) node.parent, maxKeyBeforeDelete, node.getMaxKey(),false);
+		}
+		if(node.keys.size() < this.minKeysSizePerNode) {
+			handleDeficientCase(node);
+		}
+	}
+	
+	private void updateParentKeys(InternalNode<K, V> parent, K oldKey, K newKey, boolean afterMerge) {
+		int index = Collections.binarySearch(parent.keys, oldKey);
+		if (index < 0) {
+			throw new IllegalStateException("Key not found in parent node");
+		}
+		parent.keys.set(index, newKey);
+		if(afterMerge) {
+			return;
+		}
+		if (parent.parent != null && index == parent.keys.size() - 1) {
+			updateParentKeys((InternalNode<K, V>) parent.parent, oldKey, newKey, afterMerge);
+		}
+	}
+	
+	private void handleDeficientCase(Node<K, V> node) {
+		int borrowFlag = canBorrowFromSibling(node);
+		switch (borrowFlag) {
+			case 1,2:
+				borrowFromSibling(node,borrowFlag);
+				break;
+			case -1,-2:
+				mergeWithSibling(node, borrowFlag);
+				break;
+			case 0:
+				if(!node.isLeaf) {
+					if(node.keys.isEmpty())
+						throw new IllegalStateException("Root node should not be empty in this case");
+					if (node.keys.size() == 1) {
+						this.root = ((InternalNode<K, V>) node).childs.get(0);
+						this.root.parent = null;
+					}
+				}
+				break;
+		}
+	}
+	
+	private int canBorrowFromSibling(Node<K, V> node) {
+		if (node == this.root) {
+			return 0;
+		}
+		InternalNode<K, V> parent = (InternalNode<K, V>) node.parent;
+		int nodeIndex = Collections.binarySearch(parent.keys, node.getMaxKey());
+		if (nodeIndex < 0) {
+			throw new IllegalStateException("Node not found in parent's child list");
+		}
+		if (nodeIndex == parent.childs.size() - 1) {
+			return parent.childs.get(nodeIndex - 1).keys.size() > this.minKeysSizePerNode ? 1 : -1;
+		}
+		if (nodeIndex == 0) {
+			return parent.childs.get(1).keys.size() > this.minKeysSizePerNode ? 2 : -2;
+		}
+		if (parent.childs.get(nodeIndex - 1).keys.size() <= this.minKeysSizePerNode
+				&& parent.childs.get(nodeIndex + 1).keys.size() <= this.minKeysSizePerNode) {
+			return -1;
+		}
+		return parent.childs.get(nodeIndex - 1).keys.size() > parent.childs.get(nodeIndex + 1).keys.size() ? 1 : 2;
+	}
+	
+	private void borrowFromSibling(Node<K, V> node, int borrowFlag) {
+		InternalNode<K, V> parent = (InternalNode<K,V>) node.parent;
+		int nodeIndex = Collections.binarySearch(parent.keys, node.getMaxKey());
+		Node<K, V> sibling = borrowFlag == 1 ? parent.childs.get(nodeIndex - 1) : parent.childs.get(nodeIndex + 1);
+		K borrowedKey = borrowFlag == 1 ? sibling.getMaxKey() : sibling.getMinKey();
+		if(node.isLeaf) {
+			V borrowedValue = borrowFlag == 1 ? ((LeafNode<K, V>) sibling).getMaxValue()
+					: ((LeafNode<K, V>) sibling).getMinValue();
+			((LeafNode<K, V>) sibling).removeKeyAndValue(borrowFlag == 1 ? sibling.keys.size() - 1 : 0);
+			((LeafNode<K, V>) node).addKeyAndValue(borrowedKey, borrowedValue, borrowFlag == 1 ? 0 : node.keys.size());
+		}else {
+			Node<K, V> borrowedChild = borrowFlag == 1
+					? ((InternalNode<K, V>) sibling).childs.get(sibling.keys.size() - 1)
+					: ((InternalNode<K, V>) sibling).childs.get(0);
+			((InternalNode<K, V>) sibling).removeKeyAndChild(borrowFlag == 1 ? sibling.keys.size() - 1 : 0);
+			((InternalNode<K, V>) node).addKeyAndChild(borrowedKey, borrowedChild,
+					borrowFlag == 1 ? 0 : node.keys.size());
+		}
+		updateParentKeys(parent,
+				borrowFlag == 1 ? borrowedKey : node.keys.get(node.keys.size() - 2),
+				borrowFlag == 1 ? sibling.getMaxKey() : borrowedKey,
+				false);
+	}
+	
+	private void mergeWithSibling(Node<K, V> node, int borrowedFlag) {
+		if(borrowedFlag >= 0) {
+			throw new IllegalStateException("Node can borrow from sibling");
+		}
+		InternalNode<K, V> parent = (InternalNode<K, V>) node.parent;
+		if ((borrowedFlag == -1 && parent.getMinKey() == node.getMaxKey())
+				|| (borrowedFlag == -2 && parent.getMaxKey() == node.getMaxKey())) {
+			throw new IllegalStateException("Node cannot merge with left/right sibling");
+		}
+		int nodeIndex = Collections.binarySearch(parent.keys, node.getMaxKey());
+		if (nodeIndex < 0) {
+			throw new IllegalStateException("Node not found in parent's child list");
+		}
+		Node<K, V> sibling = parent.childs.get(borrowedFlag == -1 ? nodeIndex - 1 : nodeIndex + 1);
+		K oldKey = borrowedFlag == -1? sibling.getMaxKey() : node.getMaxKey();
+		K newKey = borrowedFlag == -1? node.getMaxKey() : sibling.getMaxKey();
+		if(node.isLeaf) {
+			if(borrowedFlag == -1) {
+                ((LeafNode<K, V>) sibling).addSubListOfKV(0, node.keys.size(), (LeafNode<K, V>) node);
+                ((LeafNode<K, V>) sibling).next = ((LeafNode<K, V>) node).next;
+                if (((LeafNode<K, V>) node).next != null) 
+                    ((LeafNode<K, V>) node).next.previous = ((LeafNode<K, V>) sibling);
+            }else {
+				((LeafNode<K, V>) sibling).addSubListOfKV(0, sibling.keys.size(), (LeafNode<K, V>) sibling);
+				((LeafNode<K, V>) node).next = ((LeafNode<K, V>) sibling).next;
+				if (((LeafNode<K, V>) sibling).next != null)
+					((LeafNode<K, V>) sibling).next.previous = ((LeafNode<K, V>) node);
+            }
+		}else {
+			((InternalNode<K, V>) sibling).addAllKeysAndChilds(0, node.keys.size(), (InternalNode<K, V>) node);
+		}
+		parent.removeKeyAndChild(nodeIndex);
+		updateParentKeys(parent, oldKey, newKey, true);
+		if ((parent != this.root && parent.keys.size() < this.minKeysSizePerNode) 
+				|| (parent == this.root && parent.keys.size() == 1)) {
+			handleDeficientCase(parent);
+		}
+	}
 
 //-------------------------------------------------------------------------------------------
 //-------------------------- Print method ---------------------------------------------------
@@ -342,6 +527,27 @@ public class B_plus_Tree<K extends Comparable<K>,V> {
 		System.out.println(bPlusTree.searchFromLeaf(51));
 		
 		//Test search range
-		System.out.println(bPlusTree.searchRange(17, 64));
+		//search range from 21 to 72, ascending order
+		System.out.println(bPlusTree.searchRange(21, 72, true));
+		//search range from 21 to 72, descending order
+		System.out.println(bPlusTree.searchRange(21, 72, false));
+		//search range that is greater than 36, ascending order
+		System.out.println(bPlusTree.searchRange_SingleEdge(36, true, true));
+		//search range that is greater than 36, descending order
+		System.out.println(bPlusTree.searchRange_SingleEdge(36, false, true));
+		//search range that is less than 86, ascending order
+		System.out.println(bPlusTree.searchRange_SingleEdge(86, true, false));
+		//search range that is less than 86, descending order
+		System.out.println(bPlusTree.searchRange_SingleEdge(86, false, false));
+		
+		//Test delete
+		bPlusTree.delete(37);
+		bPlusTree.delete(63);
+		bPlusTree.delete(97);
+		bPlusTree.delete(91);
+		
+		//Test search range after deletion
+	    System.out.println(bPlusTree.searchRange(21, 72, true));
+	    System.out.println(bPlusTree.searchRange_SingleEdge(50, true, true));
 	}
 }
