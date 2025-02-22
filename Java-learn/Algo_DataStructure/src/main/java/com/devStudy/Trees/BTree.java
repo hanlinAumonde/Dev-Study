@@ -188,11 +188,12 @@ public class BTree<T extends Comparable<T>> {
 		}else if(borrowFlag > 0){
 			borrowDataFromSibling(node, borrowFlag);
 		}else {
+			if(node.keys.isEmpty() && node.children.isEmpty()) {
+				throw new IllegalStateException("Internal error: root node has no children/more than 1 child");
+			}
 			if(node.keys.isEmpty() && !node.children.isEmpty()) {
 				this.root = node.children.get(0);
 				this.root.parent = null;
-			}else{
-				throw new IllegalStateException("Internal error: root node has no children/more than 1 child");
 			}
 		}
 	}
