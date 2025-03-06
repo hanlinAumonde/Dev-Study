@@ -1,5 +1,7 @@
 .project
+.idea
 /Java-learn/.idea
+/Java-learn/**/.idea
 /Java-learn/**/.project
 /Java-learn/**/.settings
 /Java-learn/**/.classpath
