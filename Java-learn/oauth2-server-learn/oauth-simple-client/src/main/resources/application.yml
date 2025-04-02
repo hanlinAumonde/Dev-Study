@@ -1,0 +1,36 @@
+server:
+  port: 53022
+
+spring:
+  application:
+    name: spring-oauth-client
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+  security:
+    oauth2:
+      client:
+        # auth provider info
+        provider:
+          oauth-server:
+            # authorization path
+            issuer-uri: http://spring-oauth2-server:53020
+            authorization-uri: ${spring.security.oauth2.client.provider.oauth-server.issuer-uri}/oauth2/authorize
+            # path for obtaining tokens
+            token-uri: ${spring.security.oauth2.client.provider.oauth-server.issuer-uri}/oauth2/token
+        registration:
+          messaging-client-oidc:
+            provider: oauth-server
+            client-name: Oidc-Client-Test
+            client-id: oidc-client-test
+            client-secret: secret
+            client-authentication-method: client_secret_basic
+            authorization-grant-type: authorization_code
+            redirect-uri: http://spring-oauth2-client:53022/login/oauth2/code/messaging-client-oidc
+            scope:
+              - profile
+              - openid
+
+logging:
+  level:
+    org.springframework.security.oauth2: DEBUG
+    org.springframework.web.client.RestTemplate: DEBUG

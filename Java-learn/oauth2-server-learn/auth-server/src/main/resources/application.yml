@@ -1,0 +1,21 @@
+server:
+  port: 53020
+
+spring:
+    application:
+        name: auth-server
+    datasource:
+        url: jdbc:postgresql://localhost:5432/oauth2-auth
+        username: postgres
+        password: 721215
+        driver-class-name: org.postgresql.Driver
+    jpa:
+        database-platform: org.hibernate.dialect.PostgreSQLDialect
+        hibernate:
+            ddl-auto: update
+    security:
+        oauth2:
+            authorization-server:
+                issuer: http://localhost:53020
+
+                    
