@@ -110,7 +110,7 @@ public class AVLTree<T extends Comparable<T>> {
     }
     
     private boolean searchNode(T dataSearch) {
-    	return search(root, dataSearch) == null? false : true;
+    	return search(root, dataSearch) != null;
     }
     
     private Node search(Node node, T dataSearch) {
